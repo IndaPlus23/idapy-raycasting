@@ -8,8 +8,8 @@ map = [[1, 1, 1, 1, 1], #Test map
         [1, 0, 0, 0, 1],
         [1, 1, 1, 1, 1]]
 
-posx, posy, rot = 1.5, 1.5, np.pi / 4
-exitx, exity = 3, 3
+posx, posy, rot = 1.5, 1.5, np.pi / 4 #Starting position
+exitx, exity = 3, 3 #The exit
 
 while 1:
     for i in range(60): #The vision is 60 degrees
@@ -18,13 +18,15 @@ while 1:
         sin, cos = 0.02 * np.sin(rot_i), 0.02 * np.cos(rot_i)
         n = 0
 
-        while 1:
+        while True: #This is the ray that will stop when it finds a wall and draw a line depending on how long the ray was.
             x, y, n = x + cos, y + sin, n + 1
             if map[int(x)][int(y)]:
                 h = 1 / (0.02 * n)
+                depth = 1.0 - 0.25 * (n / 60.0)
+                color = (1.0, 0.5*depth, 0.8*depth)
                 break
 
-        plt.vlines(i, -h, h, lw=8)
+        plt.vlines(i, -h, h, color= color, lw=8)
 
     plt.axis('off')
     plt.tight_layout()
