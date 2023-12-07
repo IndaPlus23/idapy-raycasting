@@ -1,62 +1,95 @@
+import pygame
+import sys
 import numpy as np
-from matplotlib import pyplot as plt
-import keyboard
+import math
 
-map = [[1, 1, 1, 1, 1], #Test map
-        [1, 0, 0, 0, 1],
-        [1, 0, 1, 0, 1],
-        [1, 0, 0, 0, 1],
-        [1, 1, 1, 1, 1]]
+# Initialize Pygame
+pygame.init()
 
-posx, posy, rot = 1.5, 1.5, np.pi / 4 #Starting position
-exitx, exity = 3, 3 #The exit
+# Constants
+width, height = 600, 400
+fov = 60 #Players field of view
+max_distance = 200 #Currently large than the biggest distance between the player and a wall
+map_size = 5
+map = np.array([
+    [1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1]
+])
 
-while 1:
-    for i in range(60): #The vision is 60 degrees
-        rot_i = rot + np.deg2rad(i - 30) #The first line is at 30 degrees to the left of the player
+# Player variables
+posx, posy = 1.5, 1.5
+exitx, exity = 3, 3
+rot = np.pi / 4
+move_speed = 0.1
+rotation_speed = np.pi / 30
+
+#Set up pygame
+screen = pygame.display.set_mode((width, height))
+clock = pygame.time.Clock()
+
+def draw_fov(): #This function draws everything in the players field of vision
+
+    for i in range(fov): #The field of veiw is 60 so there is 30 lines on each side of the player
+        rot_i = rot + math.radians(i - fov / 2)
         x, y = posx, posy
-        sin, cos = 0.02 * np.sin(rot_i), 0.02 * np.cos(rot_i)
+        sin, cos = 0.02 * math.sin(rot_i), 0.02 * math.cos(rot_i)
         n = 0
 
-        while True: #This is the ray that will stop when it finds a wall and draw a line depending on how long the ray was.
+        while True:
             x, y, n = x + cos, y + sin, n + 1
-            if map[int(x)][int(y)]:
+            if map[int(x)][int(y)] or n > max_distance:
                 h = 1 / (0.02 * n)
-                depth = 1.0 - 0.25 * (n / 60.0)
-                color = (1.0, 0.5*depth, 0.8*depth)
+                normalized_depth = n / max_distance
+                color_depth = 1.0 - normalized_depth
+                color = (255, int(255 * color_depth), int(255 * color_depth))
                 break
 
-        plt.vlines(i, -h, h, color= color, lw=8)
+        pygame.draw.line(screen, color, (i * (width / fov), height / 2 - h * height / 2),
+                         (i * (width / fov), height / 2 + h * height / 2), 8)
 
-    plt.axis('off')
-    plt.tight_layout()
-    plt.axis((0, 60, -1, 1))
-    plt.draw()
-    plt.pause(0.0001)
-    plt.clf()
+        if i == 0 or i == fov - 1:
+            pygame.draw.line(screen, (255, 255, 0), (i * (width / fov), height / 2),
+                             (i * (width / fov), height / 2 + 0.6 * height / 2), 2)
 
-    key = keyboard.read_key()
-    x, y = (posx, posy)
+while True:
+    screen.fill((0, 0, 0))
+    draw_fov()
 
-    if key == 'w':
-        x, y = (x + 0.3 * np.cos(rot), y + 0.3 * np.sin(rot))
-    elif key == 's':
-        x, y = (x - 0.3 * np.cos(rot), y - 0.3 * np.sin(rot))
-    elif key == 'a':
-        rot = rot - np.pi / 10
-    elif key == 'd':
-        rot = rot + np.pi / 10
-    elif key == 'esc':
-        break
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-    if map[int(x)][int(y)] == 0: #The program is a maze and if the player reaches the exit the program exits.
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_w]:
+        new_posx, new_posy = posx + move_speed * math.cos(rot), posy + move_speed * math.sin(rot)
+        if map[int(new_posx)][int(new_posy)] == 0:
+            posx, posy = new_posx, new_posy
+    elif keys[pygame.K_s]:
+        new_posx, new_posy = posx - move_speed * math.cos(rot), posy - move_speed * math.sin(rot)
+        if map[int(new_posx)][int(new_posy)] == 0:
+            posx, posy = new_posx, new_posy
+    elif keys[pygame.K_a]:
+        rot -= rotation_speed
+    elif keys[pygame.K_d]:
+        rot += rotation_speed
+    elif keys[pygame.K_ESCAPE]:
+        pygame.quit()
+        sys.exit()
+
+    if map[int(posx)][int(posy)] == 0:
         if int(posx) == exitx and int(posy) == exity:
+            font = pygame.font.Font(None, 36)
+            text = font.render("You've reached the end of the maze!", True, (255, 255, 255))
+            screen.blit(text, (width // 4, height // 2))
+            pygame.display.flip()
+            pygame.time.delay(1000)
+            pygame.quit()
+            sys.exit()
 
-            plt.text(0.1, 0.5, "You've reached the end of the maze!", fontsize=20, color='black')
-            plt.show(block=False)
-            plt.pause(2)
-            break
-
-        posx, posy = (x, y)
-
-plt.close()
+    pygame.display.flip()
+    clock.tick(60)
