@@ -9,19 +9,21 @@ pygame.init()
 # Constants
 width, height = 600, 400
 fov = 60 #Players field of view
-max_distance = 200 #Currently large than the biggest distance between the player and a wall
-map_size = 5
+max_distance = 800 #Currently large than the biggest distance between the player and a wall
+map_size = 7
 map = np.array([
-    [1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1]
 ])
 
 # Player variables
 posx, posy = 1.5, 1.5
-exitx, exity = 3, 3
+exitx, exity = 5, 5
 rot = np.pi / 4
 move_speed = 0.1
 rotation_speed = np.pi / 30
@@ -39,8 +41,9 @@ def draw_fov(): #This function draws everything in the players field of vision
         n = 0
 
         while True:
-            x, y, n = x + cos, y + sin, n + 1
-            if map[int(x)][int(y)] or n > max_distance:
+            x, y, n = x + cos, y + sin, n + 1 #Casting the ray
+
+            if map[int(x)][int(y)] or n > max_distance: #When we hit a wall or reach the max distance
                 h = 1 / (0.02 * n)
                 normalized_depth = n / max_distance
                 color_depth = 1.0 - normalized_depth
@@ -53,6 +56,32 @@ def draw_fov(): #This function draws everything in the players field of vision
         if i == 0 or i == fov - 1:
             pygame.draw.line(screen, (255, 255, 0), (i * (width / fov), height / 2),
                              (i * (width / fov), height / 2 + 0.6 * height / 2), 2)
+
+def show_minimap():
+    minimap = pygame.Surface((width, height))
+    minimap.fill((255, 255, 255))
+
+    for i in range(map.shape[0]):
+        for j in range(map.shape[1]):
+            if map[i][j] == 1:
+                pygame.draw.rect(minimap, (0, 0, 0), (j * (width / map_size), i * (height / map_size),
+                                                      width / map_size, height / map_size))
+
+    pygame.draw.circle(minimap, (255, 0, 0), (int(posy * (width / map_size)), int(posx * (height / map_size))), 10)
+
+    fov_line_start = (
+        int(posy * (width / map_size)),
+        int(posx * (height / map_size))
+    )
+    fov_line_end = (
+        int((posy + math.sin(rot)) * (width / map_size)),
+        int((posx + math.cos(rot)) * (height / map_size))
+    )
+    pygame.draw.line(minimap, (255, 255, 0), fov_line_start, fov_line_end, 2)
+
+    screen.blit(minimap, (0, 0))
+    pygame.display.flip()
+
 
 while True:
     screen.fill((0, 0, 0))
@@ -80,6 +109,8 @@ while True:
     elif keys[pygame.K_ESCAPE]:
         pygame.quit()
         sys.exit()
+    elif keys[pygame.K_m]:
+        show_minimap()
 
     if map[int(posx)][int(posy)] == 0:
         if int(posx) == exitx and int(posy) == exity:
