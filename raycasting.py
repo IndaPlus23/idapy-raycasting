@@ -9,7 +9,7 @@ pygame.init()
 # Constants
 width, height = 600, 400
 fov = 60 #Players field of view
-max_distance = 800 #Currently large than the biggest distance between the player and a wall
+max_distance = 275 #Currently large than the biggest distance between the player and a wall
 map_size = 7
 map = np.array([
     [1, 1, 1, 1, 1, 1, 1],
@@ -44,31 +44,38 @@ def draw_fov(): #This function draws everything in the players field of vision
             x, y, n = x + cos, y + sin, n + 1 #Casting the ray
 
             if map[int(x)][int(y)] or n > max_distance: #When we hit a wall or reach the max distance
-                h = 1 / (0.02 * n)
+                h = 1 / (0.02 * n) #This is the height of the wall. It depends on the distance to the player.
+
+                #These decide the color. Also depending on the distance to the player.
                 normalized_depth = n / max_distance
                 color_depth = 1.0 - normalized_depth
                 color = (255, int(255 * color_depth), int(255 * color_depth))
                 break
 
+    #Draws a line that is perfectly mirrored in the x axis and depends on the length to the wall. 10 makes the wall solid
         pygame.draw.line(screen, color, (i * (width / fov), height / 2 - h * height / 2),
-                         (i * (width / fov), height / 2 + h * height / 2), 8)
+                         (i * (width / fov), height / 2 + h * height / 2), 10)
 
-        if i == 0 or i == fov - 1:
-            pygame.draw.line(screen, (255, 255, 0), (i * (width / fov), height / 2),
-                             (i * (width / fov), height / 2 + 0.6 * height / 2), 2)
+
 
 def show_minimap():
     minimap = pygame.Surface((width, height))
-    minimap.fill((255, 255, 255))
+    minimap.fill((255, 255, 255)) #The minimap starts off completely white
 
     for i in range(map.shape[0]):
         for j in range(map.shape[1]):
-            if map[i][j] == 1:
+            if map[i][j] == 1: #If there is a wall we draw a rectangle there
                 pygame.draw.rect(minimap, (0, 0, 0), (j * (width / map_size), i * (height / map_size),
-                                                      width / map_size, height / map_size))
+                                                    width / map_size, height / map_size))
+                #Color the exit red
+            elif i == exitx and j == exity:
+                pygame.draw.rect(minimap, (255, 0, 0), (j * (width / map_size), i * (height / map_size),
+                                                    width / map_size, height / map_size))
 
+    #Draw a circle at the position of the player
     pygame.draw.circle(minimap, (255, 0, 0), (int(posy * (width / map_size)), int(posx * (height / map_size))), 10)
 
+    #Maps out a line for the way the player is looking. This is the center of the filed of view
     fov_line_start = (
         int(posy * (width / map_size)),
         int(posx * (height / map_size))
@@ -77,6 +84,8 @@ def show_minimap():
         int((posy + math.sin(rot)) * (width / map_size)),
         int((posx + math.cos(rot)) * (height / map_size))
     )
+
+    #Draws the line
     pygame.draw.line(minimap, (255, 255, 0), fov_line_start, fov_line_end, 2)
 
     screen.blit(minimap, (0, 0))
@@ -112,11 +121,13 @@ while True:
     elif keys[pygame.K_m]:
         show_minimap()
 
+
+    #If we reach the exit of the map we show a text telling the player they found the exit
     if map[int(posx)][int(posy)] == 0:
         if int(posx) == exitx and int(posy) == exity:
-            font = pygame.font.Font(None, 36)
-            text = font.render("You've reached the end of the maze!", True, (255, 255, 255))
-            screen.blit(text, (width // 4, height // 2))
+            font = pygame.font.Font(None, 40)
+            text = font.render("You've reached the end of the maze!", True, (0, 0, 255))
+            screen.blit(text, (width // 6, height // 4))
             pygame.display.flip()
             pygame.time.delay(1000)
             pygame.quit()
